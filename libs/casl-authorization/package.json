@@ -1,0 +1,22 @@
+{
+  "name": "@bune/casl-authorization",
+  "version": "0.0.7",
+  "description": "CASL Authorization package for NestJS microservices",
+  "main": "dist/index",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@casl/ability": "^6.5.0",
+    "@nestjs/common": "^11.0.1",
+    "@nestjs/core": "^11.0.1",
+    "@nestjs/graphql": "^13.0.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "author": "devhoangkien",
+  "license": "MIT"
+}

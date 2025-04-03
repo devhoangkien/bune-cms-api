@@ -1,0 +1,25 @@
+{
+  "projects": {
+    "casl-authorization": {
+      "type": "library",
+      "root": "libs/casl-authorization",
+      "entryFile": "index",
+      "sourceRoot": "libs/casl-authorization/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/casl-authorization/tsconfig.lib.json"
+      }
+    },
+    "common": {
+      "type": "library",
+      "root": "libs/common",
+      "entryFile": "index",
+      "sourceRoot": "libs/common/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/common/tsconfig.lib.json"
+      }
+    }
+  },
+  "compilerOptions": {
+    "webpack": true
+  }
+}

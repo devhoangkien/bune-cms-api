@@ -1,0 +1,25 @@
+{
+  "name": "bune-cms",
+  "version": "0.0.1",
+  "description": "Bune CMS Backend with Nestjs GraphQL microservices",
+  "scripts": {
+    "bune-i": "sh ./scripts/install.sh",
+    "bune-lint": "sh ./scripts/lint.sh",
+    "bune-build": "sh ./scripts/build.sh",
+    "docker:build": "docker-compose build",
+    "docker:start": "docker-compose up -d",
+    "docker:dev": "docker-compose -f docker-compose-dev.yaml up -d",
+    "docker:down": "docker-compose down",
+    "start": "bun run install && bun run lint && bun run build && bun run docker:build && bun run docker:start"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/devhoangkien/bune-cms.git"
+  },
+  "author": "Devhoangkien <devhoangkien@gmail.com> (https://github.com/devhoangkien)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/devhoangkien/bune-cms.git/issues"
+  },
+  "homepage": "https://github.com/devhoangkien/bune-cms.git#readme"
+}

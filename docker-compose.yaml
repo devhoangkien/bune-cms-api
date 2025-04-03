@@ -1,0 +1,89 @@
+version: "3"
+
+services:
+
+  user-service:
+    image: "user-service:dev"
+    container_name: "user-service"
+    build:
+      context: "./microservices/user-service"
+    networks:
+      - "frontend"
+      - "backend"
+      - "userdomain"
+    expose:
+      - "50051"
+    depends_on:
+      - "user-database"
+      - "cache-service"
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "/bin/grpc_health_probe", "-addr=:50051"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: "on-failure"
+
+  api-gateway:
+    image: "api-gateway:dev"
+    container_name: "api-gateway"
+    build:
+      context: "./api-gateway"
+    networks:
+      - "frontend"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - "cache-service"
+      - "user-service"
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "wget", "localhost:3000/healthz -q -O - > /dev/null 2>&1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: "on-failure"
+
+  user-database:
+    image: "postgres:latest"
+    container_name: "user-database"
+    networks:
+      - "userdomain"
+    expose:
+      - "5432"
+    volumes:
+      - userdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${DB_USERNAME}'"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    restart: "on-failure"
+
+  cache-service:
+    image: "redis:latest"
+    container_name: "cache-service"
+    networks:
+      - "frontend"
+      - "backend"
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'redis-cli PING'"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    restart: "on-failure"
+
+networks:
+  frontend:
+  backend:
+  userdomain:
+
+volumes:
+  userdata:
