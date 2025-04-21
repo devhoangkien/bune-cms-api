@@ -7,5 +7,5 @@
 
 ## Install
 
-1.  Clone: `git clone https://github.com/bunedev/bune-microservices.git`
+1.  Clone: `git clone git@github.com:devhoangkien/bune-cms-api.git`
 2.  Use `git submodule update --init --recursive` command to update/fetch submodules.
