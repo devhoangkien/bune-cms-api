@@ -7,13 +7,13 @@ import {
   MiddlewareConsumer,
 } from '@nestjs/common';
 import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
-import { ApolloGatewayDriver, ApolloGatewayDriverConfig } from '@nestjs/apollo';
 import { GraphQLModule } from '@nestjs/graphql';
 import { verify, decode } from 'jsonwebtoken';
 import { INVALID_AUTH_TOKEN, INVALID_BEARER_TOKEN } from './app.constants';
+import { LoggerModule } from '@bune/common';
+import { YogaGatewayDriver, YogaGatewayDriverConfig } from '@graphql-yoga/nestjs-federation'
 
 const getToken = (authToken: string): string => {
-  console.log(authToken);
   const match = authToken.match(/^Bearer (.*)$/);
   if (!match || match.length < 2) {
     throw new HttpException(
@@ -21,7 +21,6 @@ const getToken = (authToken: string): string => {
       HttpStatus.UNAUTHORIZED,
     );
   }
-  console.log(match[1]);
   return match[1];
 };
 
@@ -54,12 +53,11 @@ const handleAuth = ({ req }) => {
 };
 @Module({
   imports: [
-    GraphQLModule.forRoot<ApolloGatewayDriverConfig>({
+    GraphQLModule.forRoot<YogaGatewayDriverConfig>({
       server: {
-        playground: true,
         context: handleAuth,
       },
-      driver: ApolloGatewayDriver,
+      driver: YogaGatewayDriver,
       gateway: {
         buildService: ({ name, url }) => {
           return new RemoteGraphQLDataSource({
@@ -78,6 +76,13 @@ const handleAuth = ({ req }) => {
           ],
         }),
       },
+    }),
+    LoggerModule.forRoot({
+      enableFile: true,
+      enableCloudWatch: false,
+      enableElasticsearch: false,
+      enableLoki: false,
+      enableDatadog: false,
     }),
   ],
 })
