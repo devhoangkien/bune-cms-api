@@ -1,0 +1,8 @@
+
+# service
+[submodule "microservices/user-service"]
+	path = microservices/user-service
+	url = git@github.com:devhoangkien/user-service.git
+[submodule "microservices/payment-service"]
+	path = microservices/payment-service
+	url = git@github.com:devhoangkien/bune-payment.git

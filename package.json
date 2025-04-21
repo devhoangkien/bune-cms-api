@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "description": "Bune CMS Backend with Nestjs GraphQL microservices",
   "scripts": {
-    "bune-i": "sh ./scripts/install.sh",
+    "libs-i":"sh ./scripts/link-libs.sh",
+    "bune-i": "bun run libs-i && sh ./scripts/install.sh",
     "bune-lint": "sh ./scripts/lint.sh",
     "bune-build": "sh ./scripts/build.sh",
     "docker:build": "docker-compose build",
