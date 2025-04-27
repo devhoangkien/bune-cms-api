@@ -5,3 +5,4 @@ export * from './ability.factory';
 export * from './check-permissions.decorator';
 export * from './interfaces'
 export * from './enums'
+export * from './auth.guard'

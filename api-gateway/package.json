@@ -22,8 +22,9 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
-    "@bune/common": "link:@bune/common",
+    "@apollo/client": "^3.13.8",
     "@apollo/gateway": "^2.9.3",
+    "@bune/common": "link:@bune/common",
     "@graphql-yoga/nestjs-federation": "^3.13.3",
     "@nestjs/apollo": "^13.0.2",
     "@nestjs/common": "^11.0.1",

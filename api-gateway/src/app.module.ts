@@ -9,46 +9,81 @@ import {
 import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
 import { GraphQLModule } from '@nestjs/graphql';
 import { verify, decode } from 'jsonwebtoken';
-import { INVALID_AUTH_TOKEN, INVALID_BEARER_TOKEN } from './app.constants';
+import { INVALID_AUTH_TOKEN, INVALID_BEARER_TOKEN, UNAUTHORIZED, UNAUTHORIZED_MESSAGE } from './app.constants';
 import { LoggerModule } from '@bune/common';
 import { YogaGatewayDriver, YogaGatewayDriverConfig } from '@graphql-yoga/nestjs-federation'
+import { ApolloClient, gql, HttpLink, InMemoryCache } from '@apollo/client';
+import { extractUniquePermissions } from './common';
 
 const getToken = (authToken: string): string => {
   const match = authToken.match(/^Bearer (.*)$/);
   if (!match || match.length < 2) {
-    throw new HttpException(
-      { message: INVALID_BEARER_TOKEN },
-      HttpStatus.UNAUTHORIZED,
-    );
+    throw new BadRequestException({
+      code: UNAUTHORIZED,
+      message:UNAUTHORIZED_MESSAGE
+    });
   }
   return match[1];
 };
 
 const decodeToken = (tokenString: string) => {
-  const decoded = verify(tokenString, process.env.SECRET_KEY);
+  if(!process.env.JWT_SECRET) {
+    throw new BadRequestException('Secret key not found in environment variables');
+  }
+  const decoded = verify(tokenString, process.env.JWT_SECRET);
   if (!decoded) {
-    throw new HttpException(
-      { message: INVALID_AUTH_TOKEN },
-      HttpStatus.UNAUTHORIZED,
-    );
+    throw new BadRequestException({
+      code: UNAUTHORIZED,
+      message:UNAUTHORIZED_MESSAGE
+    });
   }
   return decoded;
 };
-const handleAuth = ({ req }) => {
+
+// Apollo Client for querying user service
+const client = new ApolloClient({
+  link: new HttpLink({ uri: process.env.USER_SERVICE_URL , fetch }),  
+  cache: new InMemoryCache(),
+});
+
+const handleAuth = async ({ req }) => {
   try {
     if (req.headers.authorization) {
       const token = getToken(req.headers.authorization);
-      const decoded: any = decodeToken(token);
+      const decoded = decodeToken(token);
+    // Call UserService to get user roles
+    const { data } = await client.query({
+      query: gql`
+        query getRolesByKeys($keys: String!) {
+          getRolesByKeys(keys: $keys) {
+            id
+            key
+            name
+            permissions {
+              action
+              id
+              key
+              name
+              resource
+              status
+            }
+          }
+        }
+      `,
+      variables: { keys: decoded.roles }, // Assuming roles is a string or array of strings
+    });
+    const uniquePermissions = extractUniquePermissions(data);
       return {
         userId: decoded.userId,
-        permissions: decoded.permissions,
+        permissions:JSON.stringify(uniquePermissions),
         authorization: `${req.headers.authorization}`,
       };
     }
   } catch (err) {
-    throw new UnauthorizedException(
-      'User unauthorized with invalid authorization Headers',
-    );
+    throw new BadRequestException({
+      code: UNAUTHORIZED,
+      message:UNAUTHORIZED_MESSAGE
+    });
   }
 };
 @Module({
@@ -72,7 +107,7 @@ const handleAuth = ({ req }) => {
         },
         supergraphSdl: new IntrospectAndCompose({
           subgraphs: [
-            { name: 'user-service', url: 'http://localhost:50051/graphql' },
+            { name: 'user-service', url: process.env.USER_SERVICE_URL },
           ],
         }),
       },
