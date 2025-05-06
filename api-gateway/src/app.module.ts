@@ -9,80 +9,111 @@ import {
 import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
 import { GraphQLModule } from '@nestjs/graphql';
 import { verify, decode } from 'jsonwebtoken';
-import { INVALID_AUTH_TOKEN, INVALID_BEARER_TOKEN, UNAUTHORIZED, UNAUTHORIZED_MESSAGE } from './app.constants';
+import {
+  INVALID_AUTH_TOKEN,
+  INVALID_BEARER_TOKEN,
+  UNAUTHORIZED,
+  UNAUTHORIZED_MESSAGE,
+} from './app.constants';
 import { LoggerModule } from '@bune/common';
-import { YogaGatewayDriver, YogaGatewayDriverConfig } from '@graphql-yoga/nestjs-federation'
-import { ApolloClient, gql, HttpLink, InMemoryCache } from '@apollo/client';
+import {
+  YogaGatewayDriver,
+  YogaGatewayDriverConfig,
+} from '@graphql-yoga/nestjs-federation';
+import { GraphQLClient } from 'graphql-request';
 import { extractUniquePermissions } from './common';
+import { LRUCache } from 'lru-cache';
+
+// Initialize cache with LRU (Least Recently Used)
+const cache = new LRUCache<string, any>({
+  max: 100, // Maximum number of items in cache
+  ttl: 1000 * 60 * 5, // Cache lifetime (5 minutes)
+});
+
+// GraphQL call with cache
+async function cachedRequest(query: string, variables: any) {
+  const cacheKey = JSON.stringify({ query, variables });
+
+  if (cache.has(cacheKey)) {
+    return cache.get(cacheKey);
+  }
+
+  // If not in cache, make request
+  const data = await client.request(query, variables);
+
+  cache.set(cacheKey, data);
+
+  return data;
+}
 
 const getToken = (authToken: string): string => {
   const match = authToken.match(/^Bearer (.*)$/);
   if (!match || match.length < 2) {
     throw new BadRequestException({
       code: UNAUTHORIZED,
-      message:UNAUTHORIZED_MESSAGE
+      message: UNAUTHORIZED_MESSAGE,
     });
   }
   return match[1];
 };
 
 const decodeToken = (tokenString: string) => {
-  if(!process.env.JWT_SECRET) {
-    throw new BadRequestException('Secret key not found in environment variables');
+  if (!process.env.JWT_SECRET) {
+    throw new BadRequestException(
+      'Secret key not found in environment variables',
+    );
   }
   const decoded = verify(tokenString, process.env.JWT_SECRET);
   if (!decoded) {
     throw new BadRequestException({
       code: UNAUTHORIZED,
-      message:UNAUTHORIZED_MESSAGE
+      message: UNAUTHORIZED_MESSAGE,
     });
   }
   return decoded;
 };
 
 // Apollo Client for querying user service
-const client = new ApolloClient({
-  link: new HttpLink({ uri: process.env.USER_SERVICE_URL , fetch }),  
-  cache: new InMemoryCache(),
-});
+const client = new GraphQLClient(process.env.USER_SERVICE_URL || '');
+const query = `
+  query getRolesByKeys($keys: String!) {
+    getRolesByKeys(keys: $keys) {
+      id
+      key
+      name
+      permissions {
+        action
+        id
+        key
+        name
+        resource
+        status
+      }
+    }
+  }
+`;
 
 const handleAuth = async ({ req }) => {
   try {
     if (req.headers.authorization) {
       const token = getToken(req.headers.authorization);
       const decoded = decodeToken(token);
-    // Call UserService to get user roles
-    const { data } = await client.query({
-      query: gql`
-        query getRolesByKeys($keys: String!) {
-          getRolesByKeys(keys: $keys) {
-            id
-            key
-            name
-            permissions {
-              action
-              id
-              key
-              name
-              resource
-              status
-            }
-          }
-        }
-      `,
-      variables: { keys: decoded.roles }, // Assuming roles is a string or array of strings
-    });
-    const uniquePermissions = extractUniquePermissions(data);
+      // Call UserService to get user roles
+      const variables = { keys: decoded.roles };
+
+      const data = await cachedRequest(query, variables);
+      console.log(data);
+      const uniquePermissions = extractUniquePermissions(data);
       return {
         userId: decoded.userId,
-        permissions:JSON.stringify(uniquePermissions),
+        permissions: JSON.stringify(uniquePermissions),
         authorization: `${req.headers.authorization}`,
       };
     }
   } catch (err) {
     throw new BadRequestException({
       code: UNAUTHORIZED,
-      message:UNAUTHORIZED_MESSAGE
+      message: UNAUTHORIZED_MESSAGE,
     });
   }
 };
@@ -122,4 +153,3 @@ const handleAuth = async ({ req }) => {
   ],
 })
 export class AppModule {}
-
