@@ -37,11 +37,11 @@ async function cachedRequest(query: string, variables: any) {
 const getToken = (authToken: string): string => {
   const match = authToken.match(/^Bearer (.*)$/);
   if (!match || match.length < 2) {
-    throw createGraphQLError({
-      status: HttpStatus.UNAUTHORIZED,
-      message: UNAUTHORIZED_MESSAGE,
-      code: UNAUTHORIZED,
-    });
+    throw createGraphQLError(
+      HttpStatus.UNAUTHORIZED,
+      UNAUTHORIZED_MESSAGE,
+      UNAUTHORIZED,
+    );
   }
   return match[1];
 };
@@ -54,11 +54,11 @@ const decodeToken = (tokenString: string) => {
   }
   const decoded = verify(tokenString, process.env.JWT_SECRET);
   if (!decoded) {
-    throw createGraphQLError({
-      status: HttpStatus.UNAUTHORIZED,
-      message: UNAUTHORIZED_MESSAGE,
-      code: UNAUTHORIZED,
-    });
+    throw createGraphQLError(
+      HttpStatus.UNAUTHORIZED,
+      UNAUTHORIZED_MESSAGE,
+      UNAUTHORIZED,
+    );
   }
   return decoded;
 };
@@ -88,11 +88,11 @@ const handleAuth = async ({ req }) => {
     if (req.headers.authorization) {
       const token = getToken(req.headers.authorization);
       if (!token || token == 'undefined') {
-        throw createGraphQLError({
-          status: HttpStatus.UNAUTHORIZED,
-          message: UNAUTHORIZED_MESSAGE,
-          code: UNAUTHORIZED,
-        });
+        throw createGraphQLError(
+          HttpStatus.UNAUTHORIZED,
+          UNAUTHORIZED_MESSAGE,
+          UNAUTHORIZED,
+        );
       }
       const decoded = decodeToken(token);
       // Call UserService to get user roles
@@ -106,18 +106,18 @@ const handleAuth = async ({ req }) => {
         authorization: `${req.headers.authorization}`,
       };
     } else {
-      throw createGraphQLError({
-        status: HttpStatus.UNAUTHORIZED,
-        message: UNAUTHORIZED_MESSAGE,
-        code: UNAUTHORIZED,
-      });
+      throw createGraphQLError(
+        HttpStatus.UNAUTHORIZED,
+        UNAUTHORIZED_MESSAGE,
+        UNAUTHORIZED,
+      );
     }
   } catch (err) {
-    throw createGraphQLError({
-      status: HttpStatus.UNAUTHORIZED,
-      message: UNAUTHORIZED_MESSAGE,
-      code: UNAUTHORIZED,
-    });
+    throw createGraphQLError(
+      HttpStatus.UNAUTHORIZED,
+      UNAUTHORIZED_MESSAGE,
+      UNAUTHORIZED,
+    );
   }
 };
 @Module({
