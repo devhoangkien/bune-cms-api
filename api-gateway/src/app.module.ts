@@ -1,21 +1,9 @@
-import {
-  Module,
-  BadRequestException,
-  HttpStatus,
-  HttpException,
-  UnauthorizedException,
-  MiddlewareConsumer,
-} from '@nestjs/common';
+import { Module, BadRequestException, HttpStatus } from '@nestjs/common';
 import { IntrospectAndCompose, RemoteGraphQLDataSource } from '@apollo/gateway';
 import { GraphQLModule } from '@nestjs/graphql';
 import { verify, decode } from 'jsonwebtoken';
-import {
-  INVALID_AUTH_TOKEN,
-  INVALID_BEARER_TOKEN,
-  UNAUTHORIZED,
-  UNAUTHORIZED_MESSAGE,
-} from './app.constants';
-import { LoggerModule } from '@bune/common';
+import { UNAUTHORIZED, UNAUTHORIZED_MESSAGE } from './app.constants';
+import { LoggerModule, createGraphQLError } from '@bune/common';
 import {
   YogaGatewayDriver,
   YogaGatewayDriverConfig,
@@ -49,9 +37,10 @@ async function cachedRequest(query: string, variables: any) {
 const getToken = (authToken: string): string => {
   const match = authToken.match(/^Bearer (.*)$/);
   if (!match || match.length < 2) {
-    throw new BadRequestException({
-      code: UNAUTHORIZED,
+    throw createGraphQLError({
+      status: HttpStatus.UNAUTHORIZED,
       message: UNAUTHORIZED_MESSAGE,
+      code: UNAUTHORIZED,
     });
   }
   return match[1];
@@ -65,9 +54,10 @@ const decodeToken = (tokenString: string) => {
   }
   const decoded = verify(tokenString, process.env.JWT_SECRET);
   if (!decoded) {
-    throw new BadRequestException({
-      code: UNAUTHORIZED,
+    throw createGraphQLError({
+      status: HttpStatus.UNAUTHORIZED,
       message: UNAUTHORIZED_MESSAGE,
+      code: UNAUTHORIZED,
     });
   }
   return decoded;
@@ -97,23 +87,36 @@ const handleAuth = async ({ req }) => {
   try {
     if (req.headers.authorization) {
       const token = getToken(req.headers.authorization);
+      if (!token || token == 'undefined') {
+        throw createGraphQLError({
+          status: HttpStatus.UNAUTHORIZED,
+          message: UNAUTHORIZED_MESSAGE,
+          code: UNAUTHORIZED,
+        });
+      }
       const decoded = decodeToken(token);
       // Call UserService to get user roles
       const variables = { keys: decoded.roles };
 
       const data = await cachedRequest(query, variables);
-      console.log(data);
       const uniquePermissions = extractUniquePermissions(data);
       return {
         userId: decoded.userId,
         permissions: JSON.stringify(uniquePermissions),
         authorization: `${req.headers.authorization}`,
       };
+    } else {
+      throw createGraphQLError({
+        status: HttpStatus.UNAUTHORIZED,
+        message: UNAUTHORIZED_MESSAGE,
+        code: UNAUTHORIZED,
+      });
     }
   } catch (err) {
-    throw new BadRequestException({
-      code: UNAUTHORIZED,
+    throw createGraphQLError({
+      status: HttpStatus.UNAUTHORIZED,
       message: UNAUTHORIZED_MESSAGE,
+      code: UNAUTHORIZED,
     });
   }
 };
